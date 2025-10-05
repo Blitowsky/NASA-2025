@@ -3,10 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mapa Interactivo Giovanni</title>
+<title>Mapa Interactivo - CO₂ y Contaminantes</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet.heat/dist/leaflet-heat.js"></script>
 <style>
     #map { height: 80vh; width: 100%; margin: 0; padding: 0; }
     body { margin: 0; font-family: Arial, sans-serif; }
@@ -20,6 +19,8 @@
         border-radius: 5px;
         box-shadow: 0 0 5px rgba(0,0,0,0.3);
     }
+    .opacity-control { margin-top:5px; }
+    .legend { margin-top:10px; font-size:12px; }
 </style>
 </head>
 <body>
@@ -30,48 +31,92 @@
         <option value="buenos-aires">Buenos Aires, Argentina</option>
         <option value="madrid">Madrid, España</option>
     </select>
+
+    <div class="opacity-control">
+        <label for="co2-opacity">CO₂:</label>
+        <input type="range" id="co2-opacity" min="0" max="1" step="0.05" value="0.7" onchange="setOpacity('co2', this.value)">
+    </div>
+    <div class="opacity-control">
+        <label for="no2-opacity">NO₂:</label>
+        <input type="range" id="no2-opacity" min="0" max="1" step="0.05" value="0.6" onchange="setOpacity('no2', this.value)">
+    </div>
+    <div class="opacity-control">
+        <label for="aerosoles-opacity">Aerosoles:</label>
+        <input type="range" id="aerosoles-opacity" min="0" max="1" step="0.05" value="0.5" onchange="setOpacity('aerosoles', this.value)">
+    </div>
+
+    <div class="legend">
+        <strong>Leyenda aproximada:</strong><br>
+        CO₂: Azul → Bajo, Rojo → Alto<br>
+        NO₂: Verde → Bajo, Naranja → Alto<br>
+        Aerosoles: Amarillo → Bajo, Marrón → Alto
+    </div>
 </div>
+
 <div id="map"></div>
 
 <script>
-var map = L.map('map').setView([-33.2914, -66.32467], 10);
+    // Inicializar mapa
+    var map = L.map('map').setView([-33.2914, -66.32467], 10); // San Luis
 
-// Capas base
-var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
-var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri' });
-var reliefLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles © Esri' });
+    // Capas base
+    var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' });
+    var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
+    var reliefLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Fuente: Esri, USGS, NGA, NASA' });
 
-osmLayer.addTo(map);
+    osmLayer.addTo(map);
 
-// Selector de capas base
-var baseLayers = {
-    "OpenStreetMap": osmLayer,
-    "Satelital": satelliteLayer,
-    "Topográfico": reliefLayer
-};
-L.control.layers(baseLayers, null, {collapsed:false}).addTo(map);
+    // --- Capas WMS de NASA/SEDAC ---
+    var co2WMS = L.tileLayer.wms('https://sedac.ciesin.columbia.edu/geoserver/wms', {
+        layers: 'ocov2:oco2-co2-annual-mean',   // dataset CO₂
+        format: 'image/png',
+        transparent: true,
+        styles: 'boxfill/occam',               // estilo de colores
+        colorscalerange: '400,450',            // rango min-max en ppm CO₂
+        opacity: 0.7,
+        attribution: 'NASA SEDAC'
+    }).addTo(map);
 
-// Cargar datos procesados de Giovanni
-var heatLayer;
-fetch('co2_data.json')
-.then(response => response.json())
-.then(data => {
-    // Convertir a formato [lat, lon, valor]
-    var heatData = data.map(d => [d.lat, d.lon, d.value]);
-    heatLayer = L.heatLayer(heatData, {radius: 25, blur: 15, maxZoom: 10}).addTo(map);
-});
+    var no2WMS = L.tileLayer.wms('https://sedac.ciesin.columbia.edu/geoserver/wms', {
+        layers: 'sedac:ndh-air-pollution-exposure', // dataset NO₂ / PM
+        format: 'image/png',
+        transparent: true,
+        styles: 'boxfill/occam',
+        colorscalerange: '0,100',                // ejemplo: min 0, max 100 μg/m3
+        opacity: 0.6,
+        attribution: 'NASA SEDAC'
+    }).addTo(map);
 
-// Cambiar ubicación
-const locations = {
-    'san-luis': [-33.2914, -66.32467, 10],
-    'buenos-aires': [-34.6037, -58.3816, 12],
-    'madrid': [40.4168, -3.7038, 12]
-};
-function changeLocation() {
-    var selected = document.getElementById('locations').value;
-    var loc = locations[selected];
-    map.setView([loc[0], loc[1]], loc[2]);
-}
+    var aerosolesWMS = L.tileLayer.wms('https://sedac.ciesin.columbia.edu/geoserver/wms', {
+        layers: 'sedac:atmospheric-aerosol-optical-thickness',
+        format: 'image/png',
+        transparent: true,
+        styles: 'boxfill/occam',
+        colorscalerange: '0,1',                  // rango de ejemplo
+        opacity: 0.5,
+        attribution: 'NASA SEDAC'
+    }).addTo(map);
+
+    // Control de capas base y superpuestas
+    var baseLayers = {
+        "OpenStreetMap": osmLayer,
+        "Satelital": satelliteLayer,
+        "Topográfico": reliefLayer
+    };
+    var overlayLayers = {
+        "CO₂": co2WMS,
+        "NO₂": no2WMS,
+        "Aerosoles": aerosolesWMS
+    };
+    L.control.layers(baseLayers, overlayLayers, { collapsed: false }).addTo(map);
+
+    // Opcional: sliders de opacidad
+    function setOpacity(layer, value) {
+        value = parseFloat(value);
+        if(layer === 'co2') co2WMS.setOpacity(value);
+        else if(layer === 'no2') no2WMS.setOpacity(value);
+        else if(layer === 'aerosoles') aerosolesWMS.setOpacity(value);
+    }
 </script>
 </body>
 </html>
