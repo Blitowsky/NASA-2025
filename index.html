@@ -1,122 +1,268 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mapa Interactivo - CO₂ y Contaminantes</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-    #map { height: 80vh; width: 100%; margin: 0; padding: 0; }
-    body { margin: 0; font-family: Arial, sans-serif; }
-    #control-panel {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 1000;
-        background: white;
-        padding: 10px;
-        border-radius: 5px;
-        box-shadow: 0 0 5px rgba(0,0,0,0.3);
-    }
-    .opacity-control { margin-top:5px; }
-    .legend { margin-top:10px; font-size:12px; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Interactivo - Filtros Ambientales Argentina</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <style>
+        #map { height: 100vh; width: 100%; margin: 0; padding: 0; }
+        body { margin: 0; font-family: Arial, sans-serif; }
+        #control-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+            width: 400px;
+            transition: height 0.3s ease;
+            overflow: hidden;
+        }
+        #control-panel.collapsed {
+            height: 40px;
+        }
+        #control-content {
+            display: block;
+        }
+        #control-panel.collapsed #control-content {
+            display: none;
+        }
+        #toggle-button {
+            cursor: pointer;
+            background: #0078A8;
+            color: white;
+            padding: 5px;
+            text-align: center;
+            border-radius: 3px;
+            margin-bottom: 10px;
+        }
+        .filter-control { margin: 10px 0; }
+        .opacity-control { margin-left: 20px; }
+        .legend { margin-top: 15px; font-size: 12px; }
+        .filter-title { font-weight: bold; }
+    </style>
 </head>
 <body>
-<div id="control-panel">
-    <label for="locations">Seleccionar ubicación: </label>
-    <select id="locations" onchange="changeLocation()">
-        <option value="san-luis">San Luis, Argentina</option>
-        <option value="buenos-aires">Buenos Aires, Argentina</option>
-        <option value="madrid">Madrid, España</option>
-    </select>
+    <div id="control-panel">
+        <div id="toggle-button" onclick="togglePanel()">Mostrar/Ocultar Filtros</div>
+        <div id="control-content">
+            <div class="filter-title">Filtros Ambientales</div>
+            
+            <!-- Densidad de árboles -->
+            <div class="filter-control">
+                <label><input type="checkbox" id="tree-density" checked onchange="toggleLayer('trees', this.checked)"> Densidad de Árboles</label>
+                <div class="opacity-control">
+                    <input type="range" id="trees-opacity" min="0" max="1" step="0.05" value="0.7" onchange="setOpacity('trees', this.value)">
+                </div>
+            </div>
 
-    <div class="opacity-control">
-        <label for="co2-opacity">CO₂:</label>
-        <input type="range" id="co2-opacity" min="0" max="1" step="0.05" value="0.7" onchange="setOpacity('co2', this.value)">
+            <!-- Áreas protegidas -->
+            <div class="filter-control">
+                <label><input type="checkbox" id="protected-areas" checked onchange="toggleLayer('protected', this.checked)"> Áreas Protegidas</label>
+                <div class="opacity-control">
+                    <input type="range" id="protected-opacity" min="0" max="1" step="0.05" value="0.6" onchange="setOpacity('protected', this.value)">
+                </div>
+            </div>
+
+            <!-- Gases relevantes -->
+            <div class="filter-title">Gases Relevantes</div>
+            <div class="filter-control">
+                <label><input type="checkbox" id="co2" checked onchange="toggleLayer('co2', this.checked)"> CO₂</label>
+                <div class="opacity-control">
+                    <input type="range" id="co2-opacity" min="0" max="1" step="0.05" value="0.7" onchange="setOpacity('co2', this.value)">
+                </div>
+            </div>
+            <div class="filter-control">
+                <label><input type="checkbox" id="no2" checked onchange="toggleLayer('no2', this.checked)"> NO₂</label>
+                <div class="opacity-control">
+                    <input type="range" id="no2-opacity" min="0" max="1" step="0.05" value="0.6" onchange="setOpacity('no2', this.value)">
+                </div>
+            </div>
+            <div class="filter-control">
+                <label><input type="checkbox" id="ozone" checked onchange="toggleLayer('ozone', this.checked)"> Ozono (O₃)</label>
+                <div class="opacity-control">
+                    <input type="range" id="ozone-opacity" min="0" max="1" step="0.05" value="0.5" onchange="setOpacity('ozone', this.value)">
+                </div>
+            </div>
+
+            <!-- Especies nativas (mapa de calor) -->
+            <div class="filter-control">
+                <label><input type="checkbox" id="species" checked onchange="toggleLayer('species', this.checked)"> Distribución Especies Nativas</label>
+                <div class="opacity-control">
+                    <input type="range" id="species-opacity" min="0" max="1" step="0.05" value="0.8" onchange="setOpacity('species', this.value)">
+                </div>
+            </div>
+
+            <!-- Leyenda -->
+            <div class="legend">
+                <strong>Leyenda Aproximada:</strong><br>
+                Densidad Árboles: Verde claro → Bajo, Verde oscuro → Alto<br>
+                Áreas Protegidas: Violeta<br>
+                CO₂: Azul → Bajo (400 ppm), Rojo → Alto (450 ppm)<br>
+                NO₂: Verde → Bajo (0 mol/cm²), Naranja → Alto (10 mol/cm²)<br>
+                Ozono: Cian → Bajo (200 DU), Morado → Alto (400 DU)<br>
+                Especies Nativas: Azul → Baja densidad, Rojo → Alta densidad
+            </div>
+        </div>
     </div>
-    <div class="opacity-control">
-        <label for="no2-opacity">NO₂:</label>
-        <input type="range" id="no2-opacity" min="0" max="1" step="0.05" value="0.6" onchange="setOpacity('no2', this.value)">
-    </div>
-    <div class="opacity-control">
-        <label for="aerosoles-opacity">Aerosoles:</label>
-        <input type="range" id="aerosoles-opacity" min="0" max="1" step="0.05" value="0.5" onchange="setOpacity('aerosoles', this.value)">
-    </div>
 
-    <div class="legend">
-        <strong>Leyenda aproximada:</strong><br>
-        CO₂: Azul → Bajo, Rojo → Alto<br>
-        NO₂: Verde → Bajo, Naranja → Alto<br>
-        Aerosoles: Amarillo → Bajo, Marrón → Alto
-    </div>
-</div>
+    <div id="map"></div>
 
-<div id="map"></div>
+    <script>
+        // Inicializar mapa (centrado en Argentina)
+        var map = L.map('map').setView([-34.6, -58.4], 5); // Buenos Aires
 
-<script>
-    // Inicializar mapa
-    var map = L.map('map').setView([-33.2914, -66.32467], 10); // San Luis
+        // Capas base
+        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' });
+        var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
+        var reliefLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Fuente: Esri, USGS, NGA, NASA' });
 
-    // Capas base
-    var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' });
-    var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri' });
-    var reliefLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', { attribution: 'Tiles &copy; Esri &mdash; Fuente: Esri, USGS, NGA, NASA' });
+        osmLayer.addTo(map);
 
-    osmLayer.addTo(map);
+        // Capas de datos (WMS y Heatmap)
+        // Densidad de árboles (Global Forest Watch WMS)
+        var treeDensityLayer = L.tileLayer.wms('https://storage.googleapis.com/wri-tiles/gfw/treecover/wms', {
+            layers: 'treecover2000',
+            format: 'image/png',
+            transparent: true,
+            opacity: 0.7,
+            attribution: 'Global Forest Watch'
+        }).addTo(map);
 
-    // --- Capas WMS de NASA/SEDAC ---
-    var co2WMS = L.tileLayer.wms('https://sedac.ciesin.columbia.edu/geoserver/wms', {
-        layers: 'ocov2:oco2-co2-annual-mean',   // dataset CO₂
-        format: 'image/png',
-        transparent: true,
-        styles: 'boxfill/occam',               // estilo de colores
-        colorscalerange: '400,450',            // rango min-max en ppm CO₂
-        opacity: 0.7,
-        attribution: 'NASA SEDAC'
-    }).addTo(map);
+        // Áreas protegidas (WDPA via UNEP-WCMC)
+        var protectedAreasLayer = L.tileLayer.wms('https://www.protectedplanet.net/wms', {
+            layers: 'wdpa_polygons',
+            format: 'image/png',
+            transparent: true,
+            opacity: 0.6,
+            attribution: 'UNEP-WCMC WDPA'
+        }).addTo(map);
 
-    var no2WMS = L.tileLayer.wms('https://sedac.ciesin.columbia.edu/geoserver/wms', {
-        layers: 'sedac:ndh-air-pollution-exposure', // dataset NO₂ / PM
-        format: 'image/png',
-        transparent: true,
-        styles: 'boxfill/occam',
-        colorscalerange: '0,100',                // ejemplo: min 0, max 100 μg/m3
-        opacity: 0.6,
-        attribution: 'NASA SEDAC'
-    }).addTo(map);
+        // CO₂ (OCO-2 Level 3)
+        var co2Layer = L.tileLayer.wms('https://giovanni.gsfc.nasa.gov/giovanni/wms', {
+            layers: 'OCO2_L3_XCO2',
+            format: 'image/png',
+            transparent: true,
+            styles: 'boxfill/occam',
+            colorscalerange: '400,450',
+            opacity: 0.7,
+            attribution: 'NASA GES DISC'
+        }).addTo(map);
 
-    var aerosolesWMS = L.tileLayer.wms('https://sedac.ciesin.columbia.edu/geoserver/wms', {
-        layers: 'sedac:atmospheric-aerosol-optical-thickness',
-        format: 'image/png',
-        transparent: true,
-        styles: 'boxfill/occam',
-        colorscalerange: '0,1',                  // rango de ejemplo
-        opacity: 0.5,
-        attribution: 'NASA SEDAC'
-    }).addTo(map);
+        // NO₂ (OMI Level 3)
+        var no2Layer = L.tileLayer.wms('https://giovanni.gsfc.nasa.gov/giovanni/wms', {
+            layers: 'OMI_Aura_NO2',
+            format: 'image/png',
+            transparent: true,
+            styles: 'boxfill/occam',
+            colorscalerange: '0,10e15',
+            opacity: 0.6,
+            attribution: 'NASA GES DISC'
+        }).addTo(map);
 
-    // Control de capas base y superpuestas
-    var baseLayers = {
-        "OpenStreetMap": osmLayer,
-        "Satelital": satelliteLayer,
-        "Topográfico": reliefLayer
-    };
-    var overlayLayers = {
-        "CO₂": co2WMS,
-        "NO₂": no2WMS,
-        "Aerosoles": aerosolesWMS
-    };
-    L.control.layers(baseLayers, overlayLayers, { collapsed: false }).addTo(map);
+        // Ozono (OMI/Aura)
+        var ozoneLayer = L.tileLayer.wms('https://giovanni.gsfc.nasa.gov/giovanni/wms', {
+            layers: 'OMI_Aura_O3',
+            format: 'image/png',
+            transparent: true,
+            styles: 'boxfill/occam',
+            colorscalerange: '200,400',
+            opacity: 0.5,
+            attribution: 'NASA GES DISC'
+        }).addTo(map);
 
-    // Opcional: sliders de opacidad
-    function setOpacity(layer, value) {
-        value = parseFloat(value);
-        if(layer === 'co2') co2WMS.setOpacity(value);
-        else if(layer === 'no2') no2WMS.setOpacity(value);
-        else if(layer === 'aerosoles') aerosolesWMS.setOpacity(value);
-    }
-</script>
+        // Mapa de calor para especies nativas
+        var speciesHeatData = [
+            [-34.0, -65.0, 0.8], // Prosopis alba
+            [-33.5, -66.5, 0.7], // Schinopsis quebracho-colorado
+            [-35.0, -64.0, 0.6],
+            [-34.5, -65.5, 0.9]
+        ];
+        var speciesLayer = L.heatLayer(speciesHeatData, {
+            radius: 25,
+            blur: 15,
+            maxZoom: 10,
+            gradient: { 0.4: 'blue', 0.65: 'yellow', 1: 'red' },
+            opacity: 0.8
+        }).addTo(map);
+
+        // Control de capas
+        var baseLayers = {
+            "OpenStreetMap": osmLayer,
+            "Satelital": satelliteLayer,
+            "Topográfico": reliefLayer
+        };
+        var overlayLayers = {
+            "Densidad de Árboles": treeDensityLayer,
+            "Áreas Protegidas": protectedAreasLayer,
+            "CO₂": co2Layer,
+            "NO₂": no2Layer,
+            "Ozono (O₃)": ozoneLayer,
+            "Distribución Especies Nativas": speciesLayer
+        };
+        L.control.layers(baseLayers, overlayLayers, { collapsed: false }).addTo(map);
+
+        // Funciones de control
+        function toggleLayer(layer, checked) {
+            if (layer === 'trees') {
+                checked ? map.addLayer(treeDensityLayer) : map.removeLayer(treeDensityLayer);
+            } else if (layer === 'protected') {
+                checked ? map.addLayer(protectedAreasLayer) : map.removeLayer(protectedAreasLayer);
+            } else if (layer === 'co2') {
+                checked ? map.addLayer(co2Layer) : map.removeLayer(co2Layer);
+            } else if (layer === 'no2') {
+                checked ? map.addLayer(no2Layer) : map.removeLayer(no2Layer);
+            } else if (layer === 'ozone') {
+                checked ? map.addLayer(ozoneLayer) : map.removeLayer(ozoneLayer);
+            } else if (layer === 'species') {
+                checked ? map.addLayer(speciesLayer) : map.removeLayer(speciesLayer);
+            }
+        }
+
+        function setOpacity(layer, value) {
+            value = parseFloat(value);
+            if (layer === 'trees') {
+                treeDensityLayer.setOpacity(value);
+            } else if (layer === 'protected') {
+                protectedAreasLayer.setOpacity(value);
+            } else if (layer === 'co2') {
+                co2Layer.setOpacity(value);
+            } else if (layer === 'no2') {
+                no2Layer.setOpacity(value);
+            } else if (layer === 'ozone') {
+                ozoneLayer.setOpacity(value);
+            } else if (layer === 'species') {
+                // Para heatmap, recrear la capa con nueva opacidad
+                map.removeLayer(speciesLayer);
+                speciesLayer = L.heatLayer(speciesHeatData, {
+                    radius: 25,
+                    blur: 15,
+                    maxZoom: 10,
+                    gradient: { 0.4: 'blue', 0.65: 'yellow', 1: 'red' },
+                    opacity: value
+                });
+                if (document.getElementById('species').checked) {
+                    speciesLayer.addTo(map);
+                }
+            }
+        }
+
+        function togglePanel() {
+            var panel = document.getElementById('control-panel');
+            var button = document.getElementById('toggle-button');
+            if (panel.classList.contains('collapsed')) {
+                panel.classList.remove('collapsed');
+                button.textContent = 'Ocultar Filtros';
+            } else {
+                panel.classList.add('collapsed');
+                button.textContent = 'Mostrar Filtros';
+            }
+        }
+    </script>
 </body>
 </html>
