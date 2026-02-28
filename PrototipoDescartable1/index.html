@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mapa Interactivo - Filtros Ambientales Argentina</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div id="control-panel">
+        <div id="toggle-button">Mostrar/Ocultar Filtros</div>
+        <div id="control-content">
+            <div class="filter-title">Filtros Ambientales</div>
+            
+            <div class="filter-control">
+                <label><input type="checkbox" id="tree-density" class="layer-toggle" data-layer="trees" checked> Densidad de Árboles</label>
+                <div class="opacity-control">
+                    <input type="range" id="trees-opacity" class="opacity-slider" data-layer="trees" min="0" max="1" step="0.05" value="0.7">
+                </div>
+            </div>
+
+            <div class="filter-control">
+                <label><input type="checkbox" id="protected-areas" class="layer-toggle" data-layer="protected" checked> Áreas Protegidas</label>
+                <div class="opacity-control">
+                    <input type="range" id="protected-opacity" class="opacity-slider" data-layer="protected" min="0" max="1" step="0.05" value="0.6">
+                </div>
+            </div>
+
+            <div class="filter-title">Gases Relevantes</div>
+            <div class="filter-control">
+                <label><input type="checkbox" id="co2" class="layer-toggle" data-layer="co2" checked> CO₂</label>
+                <div class="opacity-control">
+                    <input type="range" id="co2-opacity" class="opacity-slider" data-layer="co2" min="0" max="1" step="0.05" value="0.7">
+                </div>
+            </div>
+            <div class="filter-control">
+                <label><input type="checkbox" id="no2" class="layer-toggle" data-layer="no2" checked> NO₂</label>
+                <div class="opacity-control">
+                    <input type="range" id="no2-opacity" class="opacity-slider" data-layer="no2" min="0" max="1" step="0.05" value="0.6">
+                </div>
+            </div>
+            <div class="filter-control">
+                <label><input type="checkbox" id="ozone" class="layer-toggle" data-layer="ozone" checked> Ozono (O₃)</label>
+                <div class="opacity-control">
+                    <input type="range" id="ozone-opacity" class="opacity-slider" data-layer="ozone" min="0" max="1" step="0.05" value="0.5">
+                </div>
+            </div>
+
+            <div class="filter-control">
+                <label><input type="checkbox" id="species" class="layer-toggle" data-layer="species" checked> Distribución Especies Nativas</label>
+                <div class="opacity-control">
+                    <input type="range" id="species-opacity" class="opacity-slider" data-layer="species" min="0" max="1" step="0.05" value="0.8">
+                </div>
+            </div>
+
+            <div class="legend">
+                <strong>Leyenda Aproximada:</strong><br>
+                Densidad Árboles: Verde claro → Bajo, Verde oscuro → Alto<br>
+                Áreas Protegidas: Violeta<br>
+                CO₂: Azul → Bajo (400 ppm), Rojo → Alto (450 ppm)<br>
+                NO₂: Verde → Bajo (0 mol/cm²), Naranja → Alto (10 mol/cm²)<br>
+                Ozono: Cian → Bajo (200 DU), Morado → Alto (400 DU)<br>
+                Especies Nativas: Azul → Baja densidad, Rojo → Alta densidad
+            </div>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>

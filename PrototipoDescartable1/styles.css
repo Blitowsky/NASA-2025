@@ -1,0 +1,64 @@
+#map { 
+    height: 100vh; 
+    width: 100%; 
+    margin: 0; 
+    padding: 0; 
+}
+
+body { 
+    margin: 0; 
+    font-family: Arial, sans-serif; 
+}
+
+#control-panel {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: white;
+    padding: 15px;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+    width: 400px;
+    transition: height 0.3s ease;
+    overflow: hidden;
+}
+
+#control-panel.collapsed {
+    height: 40px;
+}
+
+#control-content {
+    display: block;
+}
+
+#control-panel.collapsed #control-content {
+    display: none;
+}
+
+#toggle-button {
+    cursor: pointer;
+    background: #0078A8;
+    color: white;
+    padding: 5px;
+    text-align: center;
+    border-radius: 3px;
+    margin-bottom: 10px;
+}
+
+.filter-control { 
+    margin: 10px 0; 
+}
+
+.opacity-control { 
+    margin-left: 20px; 
+}
+
+.legend { 
+    margin-top: 15px; 
+    font-size: 12px; 
+}
+
+.filter-title { 
+    font-weight: bold; 
+}
